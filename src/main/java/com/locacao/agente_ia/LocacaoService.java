@@ -13,6 +13,16 @@ public class LocacaoService {
             "projetor 4k", 100.0
     );
 
+    public String validarCompra(Usuario usuario, double valorTotal) {
+        System.out.println("🔒 SEGURANÇA: Validando alçada para " + usuario.nome() + " (Cargo: " + usuario.cargo() + ")");
+
+        if (valorTotal > usuario.limiteAprovacao()) {
+            throw new RuntimeException("BLOQUEADO: O valor R$ " + valorTotal + " excede seu limite de R$ " + usuario.limiteAprovacao() + ". Necessária aprovação da gerência.");
+        }
+
+        return "APROVADO: Compra dentro do limite do usuário.";
+    }
+
     public String verificarDisponibilidade(String produto) {
         System.out.println("🔧 SISTEMA: Verificando estoque para: " + produto);
 
