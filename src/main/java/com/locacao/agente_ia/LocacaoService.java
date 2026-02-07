@@ -1,46 +1,72 @@
 package com.locacao.agente_ia;
 
 import org.springframework.stereotype.Service;
+import java.util.Optional;
 import java.util.Map;
 
 @Service // Indica que isso é uma classe de negócio do Spring
 public class LocacaoService {
 
-    // Simula nosso banco de dados de produtos e preços
-    private static final Map<String, Double> PRECOS = Map.of(
-            "notebook gamer", 250.0,
-            "macbook pro", 300.0,
-            "projetor 4k", 100.0
-    );
+    private final ProdutoRepository produtoRepository;
+    private final PedidoRepository pedidoRepository;
 
-    public String validarCompra(Usuario usuario, double valorTotal) {
-        System.out.println("🔒 SEGURANÇA: Validando alçada para " + usuario.nome() + " (Cargo: " + usuario.cargo() + ")");
+    // Injeção de dependência do repositório
+    public LocacaoService(ProdutoRepository produtoRepository, PedidoRepository pedidoRepository) {
+        this.produtoRepository = produtoRepository;
+        this.pedidoRepository = pedidoRepository;
+    }
 
+    public String realizarLocacao(Usuario usuario, String nomeProduto, int quantidade, int dias, double valorTotal) {
+        System.out.println("💾 DB: Tentando efetivar locação para " + usuario.nome());
+
+        // 1. Validação de Segurança (Mantendo o que já fizemos)
         if (valorTotal > usuario.limiteAprovacao()) {
-            throw new RuntimeException("BLOQUEADO: O valor R$ " + valorTotal + " excede seu limite de R$ " + usuario.limiteAprovacao() + ". Necessária aprovação da gerência.");
+            throw new RuntimeException("BLOQUEADO: O valor R$ " + valorTotal + " excede o limite de R$ " + usuario.limiteAprovacao());
         }
 
-        return "APROVADO: Compra dentro do limite do usuário.";
+        // 2. Validação de Estoque (Garantia final antes de salvar)
+        Produto produto = produtoRepository.findByNomeContainingIgnoreCase(nomeProduto)
+                .orElseThrow(() -> new RuntimeException("Produto não encontrado"));
+
+        if (produto.getQuantidadeEstoque() < quantidade) {
+            throw new RuntimeException("ERRO: Estoque insuficiente no momento da gravação.");
+        }
+
+        // 3. ATUALIZA O ESTOQUE (A mágica acontece aqui)
+        produto.setQuantidadeEstoque(produto.getQuantidadeEstoque() - quantidade);
+        produtoRepository.save(produto); // UPDATE produto SET estoque = ...
+
+        // 4. SALVA O PEDIDO
+        Pedido pedido = new Pedido(usuario.nome(), nomeProduto, quantidade, dias, valorTotal);
+        pedidoRepository.save(pedido);
+
+        return "SUCESSO: Pedido #" + pedido.getId() + " confirmado! Estoque atualizado.";
     }
 
-    public String verificarDisponibilidade(String produto) {
-        System.out.println("🔧 SISTEMA: Verificando estoque para: " + produto);
+    public String verificarDisponibilidade(String nomeProduto, int quantidadeDesejada) {
+        System.out.println("🔧 DB: Buscando produto " + nomeProduto);
 
-        // Simples verificação: se está no mapa, temos estoque
-        if (PRECOS.containsKey(produto.toLowerCase())) {
-            return "Disponível";
+        Optional<Produto> produtoOpt = produtoRepository.findByNomeContainingIgnoreCase(nomeProduto);
+
+        if (produtoOpt.isEmpty()) {
+            return "Produto não encontrado em nosso catálogo.";
         }
-        return "Indisponível";
+
+        Produto produto = produtoOpt.get();
+        if (produto.getQuantidadeEstoque() >= quantidadeDesejada) {
+            return "Disponível! Temos " + produto.getQuantidadeEstoque() + " unidades em estoque.";
+        } else {
+            return "Estoque insuficiente. Temos apenas " + produto.getQuantidadeEstoque() + " unidades.";
+        }
     }
 
-    public double calcularPrecoTotal(String produto, int dias, int quantidade) {
-        System.out.println("🔧 SISTEMA: Calculando orçamento...");
+    public double calcularPrecoTotal(String nomeProduto, int dias, int quantidade) {
+        Optional<Produto> produtoOpt = produtoRepository.findByNomeContainingIgnoreCase(nomeProduto);
 
-        Double precoDiaria = PRECOS.get(produto.toLowerCase());
-        if (precoDiaria == null) {
-            throw new IllegalArgumentException("Produto não cadastrado: " + produto);
+        if (produtoOpt.isEmpty()) {
+            throw new IllegalArgumentException("Produto não encontrado: " + nomeProduto);
         }
 
-        return precoDiaria * dias * quantidade;
+        return produtoOpt.get().getPrecoDiaria() * dias * quantidade;
     }
 }

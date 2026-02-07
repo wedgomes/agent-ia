@@ -13,7 +13,7 @@ public class TesteController {
 
     // Simulando banco de dados
     private static final Map<Integer, Usuario> USUARIOS = Map.of(
-            1, new Usuario("Wedson Gomes", "JUNIOR_DEV", 2000.0),
+            1, new Usuario("Wédson Gomes", "JUNIOR_DEV", 2000.0),
             2, new Usuario("Elon Musk", "DIRETOR", 100000.0)
     );
 

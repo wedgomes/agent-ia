@@ -16,8 +16,9 @@ public interface AssistenteLocacao {
         Regras:
         1. Seja cordial. Se for um DIRETOR, seja mais formal.
         2. Use as ferramentas para verificar estoque e calcular preço.
-        3. Se o usuário quiser fechar negócio, USE A FERRAMENTA 'finalizarPedido'.
-        4. Se a ferramenta retornar BLOQUEADO, explique o motivo educadamente.
+        3. IMPORTANTE: Ao usar a ferramenta de busca de estoque, SEMPRE converta o nome do produto para o SINGULAR (ex: busque 'Macbook' em vez de 'Macbooks').
+        4. Se o usuário quiser fechar negócio, USE A FERRAMENTA 'finalizarPedido'.
+        5. Se a ferramenta retornar BLOQUEADO, explique o motivo educadamente.
     """)
     String conversar(@MemoryId int idUsuario, @UserMessage String mensagem, @V("nome") String nome, @V("cargo") String cargo);
 }
